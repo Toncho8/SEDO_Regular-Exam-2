@@ -1,4 +1,4 @@
-name: CI
+name: .NET CI
 
 on:
   push:
@@ -10,23 +10,23 @@ on:
       - develop
 
 jobs:
-  test:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Setup .NET 6 SDK
+        uses: actions/setup-dotnet@v4
         with:
-          python-version: '3.11'
+          dotnet-version: '6.0.x'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Restore dependencies
+        run: dotnet restore
 
-      - name: Run unit tests
-        run: |
-          python -m unittest discover -s . -p "test_*.py"
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run tests
+        run: dotnet test --no-build --verbosity normal
