@@ -1,18 +1,46 @@
 name: Build and Test
+
 on:
-push:
-branches: [ "develop", "feature" ]
+  push:
+    branches:
+      - develop
+      - 'feature/**'
+
 jobs:
-build_test:
-runs-on: ubuntu-latest
-steps:
-- name: Checkout the repository uses: actions/checkout@v4
-- name: Setup .NET 6
-uses: actions/setup-dotnet@v4 with:
-dotnet-version: 6.0.x
-name: Restore dependencies
-run: dotnet restore
-- name: Build
-run: dotnet build --no-restore
-- name: Run Unit and Integration Test
-run: dotnet test --no-build --verbosity normal
+  build_test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 6
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Restore dependencies
+        run: |
+          for proj in $(find . -name "*.csproj"); do
+            echo "Restoring $proj"
+            dotnet restore "$proj"
+          done
+
+      - name: Build
+        run: |
+          for proj in $(find . -name "*.csproj"); do
+            echo "Building $proj"
+            dotnet build "$proj" --no-restore --configuration Release
+          done
+
+      - name: Run tests
+        run: |
+          test_projects=$(find . -name "*.csproj" | grep -i test || true)
+          if [ -z "$test_projects" ]; then
+            echo "⚠️ No test projects found. Skipping tests."
+          else
+            for test_proj in $test_projects; do
+              echo "Running tests for $test_proj"
+              dotnet test "$test_proj" --no-build --configuration Release --verbosity normal
+            done
+          fi
