@@ -1,46 +1,32 @@
-name: Build and Test
+name: Python CI
 
 on:
   push:
     branches:
       - develop
       - 'feature/**'
+  pull_request:
+    branches:
+      - develop
 
 jobs:
-  build_test:
+  test:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET 6
-        uses: actions/setup-dotnet@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          dotnet-version: 6.0.x
+          python-version: '3.11'
 
-      - name: Restore dependencies
+      - name: Install dependencies
         run: |
-          for proj in $(find . -name "*.csproj"); do
-            echo "Restoring $proj"
-            dotnet restore "$proj"
-          done
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Build
+      - name: Run unit tests
         run: |
-          for proj in $(find . -name "*.csproj"); do
-            echo "Building $proj"
-            dotnet build "$proj" --no-restore --configuration Release
-          done
-
-      - name: Run tests
-        run: |
-          test_projects=$(find . -name "*.csproj" | grep -i test || true)
-          if [ -z "$test_projects" ]; then
-            echo "⚠️ No test projects found. Skipping tests."
-          else
-            for test_proj in $test_projects; do
-              echo "Running tests for $test_proj"
-              dotnet test "$test_proj" --no-build --configuration Release --verbosity normal
-            done
-          fi
+          python -m unittest discover -s . -p "test_*.py"
